@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>🚪 Mandir Entry Gate</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background:#eef3f7;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  padding:30px 15px;
+}
+
+.container {
+  width:100%;
+  max-width:520px;
+}
+
+h2 {
+  text-align:center;
+  margin-bottom:20px;
+}
+
+.card {
+  background:white;
+  padding:28px;
+  border-radius:12px;
+  box-shadow:0 6px 18px rgba(0,0,0,.15);
+  margin-bottom:20px;
+}
+
+input {
+  width:100%;
+  padding:16px;
+  margin:14px 0;
+  font-size:18px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+
+button {
+  width:100%;
+  background:#2c3e50;
+  color:white;
+  border:none;
+  padding:16px;
+  font-size:18px;
+  border-radius:8px;
+  cursor:pointer;
+  margin-top:12px;
+}
+
+button:hover {
+  background:#1a252f;
+}
+
+.info {
+  font-weight:bold;
+  font-size:18px;
+  margin:12px 0;
+}
+
+.success {
+  color:green;
+  font-weight:bold;
+  font-size:18px;
+  margin-top:10px;
+}
+
+.error {
+  color:red;
+  font-weight:bold;
+  font-size:18px;
+  margin-top:10px;
+}
+
+.hidden { display:none }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🚪 Entry Gate Control</h2>
+
+<!-- ================= LOGIN ================= -->
+<div class="card" id="loginCard">
+  <input id="adminIdInput" placeholder="Enter Admin ID">
+  <button onclick="verifyAdmin()">🔐 Verify Admin</button>
+</div>
+
+<!-- ================= ENTRY ================= -->
+<div class="card hidden" id="entryCard">
+  <h3 id="mandirTitle" style="text-align:center;margin-bottom:15px"></h3>
+
+  <p id="batchInfo" class="info"></p>
+
+  <input id="tokenInput" type="number" placeholder="Enter Token Number">
+
+  <button onclick="verifyToken()">✅ Verify Token</button>
+
+  <button onclick="batchEntered()">🚪 Batch Entered</button>
+
+  <p id="result"></p>
+</div>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyBeTQdKmRH788wMrQh4x-IkEt6lt4_rd4E",
+  databaseURL: "https://darshan-app-48a19-default-rtdb.firebaseio.com"
+});
+
+const db = firebase.database();
+
+let templeId = "";
+let batchSize = 0;
+let lastEnd = 0;
+let batchStart = 0;
+
+// ================= VERIFY ADMIN =================
+function verifyAdmin(){
+  const adminId = adminIdInput.value.trim();
+  if(!adminId) return alert("Enter Admin ID");
+
+  db.ref("admins/"+adminId).once("value").then(s=>{
+    if(!s.exists()) return alert("❌ Invalid Admin");
+
+    templeId = s.val().templeId;
+
+    loadMandir();
+    loadSettings();
+    listenBatch();
+
+    loginCard.classList.add("hidden");
+    entryCard.classList.remove("hidden");
+  });
+}
+
+// ================= LOAD MANDIR =================
+function loadMandir(){
+  db.ref("mandirs/"+templeId).once("value").then(s=>{
+    mandirTitle.innerText =
+      "🛕 " + s.val().mandirName + " – Entry Gate";
+  });
+}
+
+// ================= LOAD SETTINGS =================
+function loadSettings(){
+  db.ref("batchSettings/"+templeId).once("value").then(s=>{
+    batchSize = s.val().peoplePerBatch;
+  });
+}
+
+// ================= LISTEN BATCH =================
+function listenBatch(){
+  db.ref("nextBatch/"+templeId).on("value", s=>{
+    const data = s.val() || { lastEnd: 0, batchStart: 0 };
+    lastEnd = data.lastEnd || 0;
+    batchStart = data.batchStart || 0;
+    updateUI();
+  });
+}
+
+// ================= UPDATE UI =================
+function updateUI(){
+  const start = lastEnd + 1;
+  const end = start + batchSize - 1;
+
+  let text = `Current Batch Tokens: ${start} – ${end}`;
+  text += batchStart ? " | Status: ACTIVE" : " | Status: WAITING";
+
+  batchInfo.innerText = text;
+}
+
+// ================= VERIFY TOKEN =================
+function verifyToken(){
+  const t = Number(tokenInput.value);
+  const start = lastEnd + 1;
+  const end = start + batchSize - 1;
+
+  if(t < start || t > end){
+    result.innerText = "❌ Token not in current batch";
+    result.className = "error";
+  } else {
+    result.innerText = "✅ Token Valid";
+    result.className = "success";
+  }
+}
+
+// ================= BATCH ENTERED =================
+function batchEntered(){
+  if(batchStart) return alert("Batch already active");
+
+  db.ref("nextBatch/"+templeId).update({
+    batchStart: Date.now()
+  });
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>👮 Mandir Admin Panel</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #eef2f5;
+  text-align: center;
+  padding: 20px;
+}
+h2 { color: #003366; }
+
+.card {
+  background: white;
+  padding: 20px;
+  margin: 20px auto;
+  max-width: 460px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+input, select {
+  width: 92%;
+  padding: 10px;
+  margin: 8px 0;
+  font-size: 16px;
+}
+
+button {
+  background: #003366;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  font-size: 16px;
+  border-radius: 5px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+
+button:hover { background: #004a99; }
+
+.hidden { display: none; }
+.success { color: green; font-weight: bold; margin-top: 10px; }
+.info { font-weight: bold; color: #333; }
+</style>
+</head>
+
+<body>
+
+<h2>👮 Mandir Admin Control Panel</h2>
+
+<!-- ================= LOGIN ================= -->
+<div class="card" id="loginCard">
+  <h3>Admin Login</h3>
+
+  <select id="mandirSelect">
+    <option value="">Select Your Mandir</option>
+  </select>
+
+  <input type="password" id="adminIdInput" placeholder="Enter Admin ID (ADM-XXXXXX)">
+  <input type="text" id="phoneInput" placeholder="Enter Phone (+91XXXXXXXXXX)">
+
+  <button onclick="sendOTP()">📲 Send OTP</button>
+
+  <div id="otpSection" class="hidden">
+    <input type="text" id="otpInput" placeholder="Enter OTP">
+    <button onclick="verifyOTP()">🔐 Verify & Login</button>
+  </div>
+
+  <p class="info">OTP-protected admin access (simulated)</p>
+</div>
+
+<!-- ================= SETTINGS ================= -->
+<div class="card hidden" id="settingsCard">
+  <h3>🛕 Mandir Settings</h3>
+  <p class="info" id="mandirInfo"></p>
+
+  <label>Darshan Start Time</label>
+  <input type="time" id="startTime">
+
+  <label>Darshan End Time</label>
+  <input type="time" id="endTime">
+
+  <label>People per Batch</label>
+  <input type="number" id="peoplePerBatch" min="1">
+
+  <label>Time per Batch (minutes)</label>
+  <input type="number" id="timePerBatch" min="1">
+
+  <button onclick="saveSettings()">💾 Save Settings</button>
+  <p id="settingsStatus" class="success"></p>
+</div>
+
+<!-- ================= Firebase ================= -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script>
+// ================= FIREBASE INIT =================
+firebase.initializeApp({
+  apiKey: "AIzaSyBeTQdKmRH788wMrQh4x-IkEt6lt4_rd4E",
+  authDomain: "darshan-app-48a19.firebaseapp.com",
+  databaseURL: "https://darshan-app-48a19-default-rtdb.firebaseio.com",
+  projectId: "darshan-app-48a19",
+  messagingSenderId: "1036337719358",
+  appId: "1:1036337719358:web:edabaf639a8cabfccb896f"
+});
+
+const db = firebase.database();
+
+let templeId = "";
+let adminId = "";
+
+// ================= LOAD MANDIRS =================
+const mandirSelect = document.getElementById("mandirSelect");
+
+db.ref("mandirs").on("value", snap => {
+  mandirSelect.innerHTML = '<option value="">Select Your Mandir</option>';
+  snap.forEach(child => {
+    const opt = document.createElement("option");
+    opt.value = child.key;
+    opt.textContent = child.val().mandirName;
+    mandirSelect.appendChild(opt);
+  });
+});
+
+// ================= SEND OTP (SIMULATED) =================
+function sendOTP() {
+  adminId = adminIdInput.value.trim();
+  templeId = mandirSelect.value;
+  const phone = phoneInput.value.trim();
+
+  if (!templeId) return alert("Select your mandir");
+  if (!adminId) return alert("Enter Admin ID");
+  if (!phone) return alert("Enter phone number");
+
+  // Verify admin exists
+  db.ref("admins/" + adminId).once("value").then(snap => {
+    if (!snap.exists() || snap.val().templeId !== templeId) {
+      alert("❌ Invalid Admin ID for selected mandir");
+      return;
+    }
+
+    const otp = Math.floor(100000 + Math.random() * 900000);
+
+    db.ref("adminOTP/" + adminId).set({
+      otp,
+      createdAt: Date.now(),
+      expiresIn: 120000 // 2 minutes
+    });
+
+    console.log("🔐 OTP (Demo):", otp); // for judges/demo
+    alert("✅ OTP generated (demo mode)");
+
+    otpSection.classList.remove("hidden");
+  });
+}
+
+// ================= VERIFY OTP =================
+function verifyOTP() {
+  const enteredOTP = otpInput.value.trim();
+
+  if (!enteredOTP) return alert("Enter OTP");
+
+  db.ref("adminOTP/" + adminId).once("value").then(snap => {
+    if (!snap.exists()) return alert("OTP expired");
+
+    const data = snap.val();
+
+    if (Date.now() - data.createdAt > data.expiresIn) {
+      alert("❌ OTP expired");
+      return;
+    }
+
+    if (enteredOTP != data.otp) {
+      alert("❌ Invalid OTP");
+      return;
+    }
+
+    // OTP verified
+    db.ref("adminOTP/" + adminId).remove();
+    verifyAdmin();
+  });
+}
+
+// ================= ADMIN VERIFY =================
+function verifyAdmin() {
+  loadMandirInfo();
+  loadSettings();
+
+  loginCard.classList.add("hidden");
+  settingsCard.classList.remove("hidden");
+}
+
+// ================= LOAD MANDIR INFO =================
+function loadMandirInfo() {
+  db.ref("mandirs/" + templeId).once("value").then(snap => {
+    const m = snap.val();
+    mandirInfo.innerText =
+      `Mandir: ${m.mandirName} | Location: Lat ${m.location.lat}, Lng ${m.location.lng}`;
+  });
+}
+
+// ================= LOAD SETTINGS =================
+function loadSettings() {
+  db.ref("batchSettings/" + templeId).once("value").then(snap => {
+    if (!snap.exists()) return;
+    const d = snap.val();
+    startTime.value = d.startTime || "";
+    endTime.value = d.endTime || "";
+    peoplePerBatch.value = d.peoplePerBatch || "";
+    timePerBatch.value = d.timePerBatch || "";
+  });
+}
+
+// ================= SAVE SETTINGS =================
+function saveSettings() {
+  const data = {
+    startTime: startTime.value,
+    endTime: endTime.value,
+    peoplePerBatch: parseInt(peoplePerBatch.value),
+    timePerBatch: parseInt(timePerBatch.value),
+    updatedAt: Date.now()
+  };
+
+  if (!data.startTime || !data.endTime || !data.peoplePerBatch || !data.timePerBatch) {
+    alert("Fill all fields");
+    return;
+  }
+
+  db.ref("batchSettings/" + templeId).set(data).then(() => {
+    settingsStatus.innerText = "✅ Settings saved successfully";
+  });
+}
+</script>
+
+</body>
+</html>

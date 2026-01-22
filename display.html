@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>📺 Darshan Live Display</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #000;
+  color: #fff;
+  text-align: center;
+  padding: 40px;
+}
+
+h1 {
+  font-size: 48px;
+  margin-bottom: 20px;
+  letter-spacing: 1px;
+}
+
+#instruction {
+  font-size: 24px;
+  margin-bottom: 16px;
+  color: #ccc;
+}
+
+select {
+  font-size: 22px;
+  padding: 14px 20px;
+  border-radius: 8px;
+  margin-bottom: 30px;
+  border: none;
+}
+
+#mandirName {
+  font-size: 36px;
+  margin: 20px 0;
+  color: #00e5ff;
+  font-weight: bold;
+}
+
+#batchRange {
+  font-size: 96px;
+  font-weight: bold;
+  margin: 30px 0;
+  color: #ffd700;
+}
+
+#status {
+  font-size: 28px;
+  color: #90ee90;
+  margin-top: 10px;
+}
+
+.footer {
+  position: fixed;
+  bottom: 20px;
+  width: 100%;
+  font-size: 18px;
+  color: #aaa;
+  letter-spacing: 0.5px;
+}
+</style>
+</head>
+
+<body>
+
+<h1>📺 NOW SERVING</h1>
+
+<div id="instruction">Please select a mandir</div>
+
+<select id="mandirSelect">
+  <option value="">Select Mandir</option>
+</select>
+
+<div id="mandirName"></div>
+<div id="batchRange">--</div>
+<div id="status">Waiting for selection</div>
+
+<div class="footer">
+  🛕 Darshan Token Management System
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script>
+/* ================= FIREBASE INIT ================= */
+firebase.initializeApp({
+  apiKey: "AIzaSyBeTQdKmRH788wMrQh4x-IkEt6lt4_rd4E",
+  authDomain: "darshan-app-48a19.firebaseapp.com",
+  databaseURL: "https://darshan-app-48a19-default-rtdb.firebaseio.com",
+  projectId: "darshan-app-48a19",
+  messagingSenderId: "1036337719358",
+  appId: "1:1036337719358:web:edabaf639a8cabfccb896f"
+});
+
+const db = firebase.database();
+
+let currentTemple = "";
+let batchSize = 0;
+let batchListener = null;
+
+/* ================= LOAD MANDIRS ================= */
+const mandirSelect = document.getElementById("mandirSelect");
+
+db.ref("mandirs").on("value", snap => {
+  mandirSelect.innerHTML = '<option value="">Select Mandir</option>';
+  snap.forEach(child => {
+    const opt = document.createElement("option");
+    opt.value = child.key;
+    opt.textContent = child.val().mandirName;
+    mandirSelect.appendChild(opt);
+  });
+});
+
+/* ================= MANDIR CHANGE ================= */
+mandirSelect.addEventListener("change", e => {
+  const templeId = e.target.value;
+  resetDisplay();
+  if (!templeId) return;
+
+  currentTemple = templeId;
+
+  db.ref("mandirs/" + templeId + "/mandirName")
+    .once("value")
+    .then(s => {
+      mandirName.innerText = "🛕 " + s.val();
+    });
+
+  db.ref("batchSettings/" + templeId + "/peoplePerBatch")
+    .once("value")
+    .then(s => {
+      batchSize = s.val() || 0;
+      listenBatch();
+    });
+});
+
+/* ================= LISTEN TO BATCH ================= */
+function listenBatch() {
+  if (!currentTemple || !batchSize) {
+    status.innerText = "⏳ Waiting for setup";
+    return;
+  }
+
+  batchListener = db.ref("nextBatch/" + currentTemple)
+    .on("value", snap => {
+      const data = snap.val();
+
+      if (!data) {
+        batchRange.innerText = "--";
+        status.innerText = "⏳ Darshan not started";
+        return;
+      }
+
+      const lastEnd = data.lastEnd || 0;
+      const batchStart = data.batchStart || 0;
+
+      const start = lastEnd + 1;
+      const end = start + batchSize - 1;
+
+      batchRange.innerText = `${start} – ${end}`;
+      status.innerText = batchStart
+        ? "Please proceed to darshan"
+        : "Waiting for next batch";
+    });
+}
+
+/* ================= RESET ================= */
+function resetDisplay() {
+  if (batchListener && currentTemple) {
+    db.ref("nextBatch/" + currentTemple).off("value", batchListener);
+  }
+
+  mandirName.innerText = "";
+  batchRange.innerText = "--";
+  status.innerText = "Waiting for selection";
+}
+</script>
+
+</body>
+</html>

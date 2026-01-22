@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>🛕 Mandir Admin Onboarding</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body { font-family: Arial; background: #f0f4f8; text-align: center; padding: 20px }
+h2 { color: #2c3e50; }
+.card { background: white; max-width: 500px; margin: auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1) }
+input { width: 94%; padding: 10px; margin: 8px 0; font-size: 16px }
+button { background: #2c3e50; color: white; border: none; padding: 12px; font-size: 16px; border-radius: 5px; cursor: pointer; margin-top: 12px }
+button:hover { background: #1a252f }
+.success { color: green; font-weight: bold }
+.error { color: red; font-weight: bold }
+.hidden { display: none }
+small { color: #555; display:block; margin-top:6px }
+</style>
+</head>
+
+<body>
+
+<h2>🛕 Mandir Admin Onboarding Portal</h2>
+
+<div class="card">
+
+  <input id="mandirName" placeholder="Mandir Name (Official)">
+  <input id="latitude" type="number" step="any" placeholder="📍 Latitude (e.g. 27.5816)">
+  <input id="longitude" type="number" step="any" placeholder="📍 Longitude (e.g. 77.7006)">
+  <small>⚠️ Prototype mode: Enter coordinates manually (Production will use auto-location)</small>
+
+  <input id="adminName" placeholder="Authorized Admin Full Name">
+  <input id="phone" placeholder="Official Phone Number (+91XXXXXXXXXX)">
+  <input id="email" placeholder="Official Gmail ID (abc@gmail.com)">
+
+  <button onclick="makePayment()">💳 Pay & Register Mandir</button>
+
+  <p id="statusMsg" class="hidden"></p>
+  <p id="adminIdDisplay" class="success hidden"></p>
+
+</div>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script>
+/* ================= FIREBASE ================= */
+firebase.initializeApp({
+  apiKey: "AIzaSyBeTQdKmRH788wMrQh4x-IkEt6lt4_rd4E",
+  authDomain: "darshan-app-48a19.firebaseapp.com",
+  databaseURL: "https://darshan-app-48a19-default-rtdb.firebaseio.com",
+  projectId: "darshan-app-48a19",
+  messagingSenderId: "1036337719358",
+  appId: "1:1036337719358:web:edabaf639a8cabfccb896f"
+});
+const db = firebase.database();
+
+/* ================= PAYMENT (DEMO) ================= */
+function makePayment() {
+  const data = getData();
+  if (!data) return;
+
+  setStatus("Processing payment & registering mandir…");
+
+  setTimeout(() => {
+    registerMandir(data);
+  }, 1000);
+}
+
+/* ================= REGISTER ================= */
+function registerMandir(d) {
+  const templeId = d.mandirName.toLowerCase().replace(/[^a-z0-9]+/g, "_");
+  const adminId = "ADM-" + Math.floor(100000 + Math.random() * 900000);
+
+  db.ref("mandirs/" + templeId).set({
+    mandirName: d.mandirName,
+    location: { lat: d.lat, lng: d.lng },
+    adminId,
+    createdAt: Date.now()
+  });
+
+  db.ref("admins/" + adminId).set({
+    templeId,
+    name: d.adminName,
+    phone: d.phone,
+    email: d.email,
+    active: true,
+    createdAt: Date.now()
+  });
+
+  db.ref("batchSettings/" + templeId).set({
+    peoplePerBatch: 50,
+    timePerBatch: 10
+  });
+
+  setStatus("✅ Mandir registered successfully");
+  adminIdDisplay.innerText = "🔐 Your Admin ID: " + adminId;
+  adminIdDisplay.classList.remove("hidden");
+}
+
+/* ================= HELPERS ================= */
+function getData() {
+  const mandirName = mandirNameInput();
+  const lat = parseFloat(latitude.value);
+  const lng = parseFloat(longitude.value);
+  const adminName = adminNameInput();
+  const phone = phoneInput();
+  const email = emailInput();
+
+  if (!mandirName || !adminName || !phone || !email) {
+    setStatus("❌ Fill all fields", true);
+    return null;
+  }
+
+  if (isNaN(lat) || isNaN(lng)) {
+    setStatus("❌ Invalid latitude / longitude", true);
+    return null;
+  }
+
+  // 📞 Phone: +91 followed by exactly 10 digits
+  const phoneRegex = /^\+91[6-9]\d{9}$/;
+  if (!phoneRegex.test(phone)) {
+    setStatus("❌ Phone must be +91 followed by 10 digits", true);
+    return null;
+  }
+
+  // 📧 Gmail only
+  const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+  if (!gmailRegex.test(email)) {
+    setStatus("❌ Only valid Gmail ID allowed (abc@gmail.com)", true);
+    return null;
+  }
+
+  return { mandirName, lat, lng, adminName, phone, email };
+}
+
+function setStatus(msg, isError=false) {
+  const el = document.getElementById("statusMsg");
+  el.innerText = msg;
+  el.className = isError ? "error" : "success";
+  el.classList.remove("hidden");
+}
+
+/* ================= INPUT SHORTCUTS ================= */
+function mandirNameInput(){ return mandirName.value.trim(); }
+function adminNameInput(){ return adminName.value.trim(); }
+function phoneInput(){ return phone.value.trim(); }
+function emailInput(){ return email.value.trim(); }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>🚪 Mandir Exit Gate</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background:#f4f6f8;
+  display:flex;
+  justify-content:center;
+  align-items:flex-start;
+  padding:30px 15px;
+}
+
+.container {
+  width:100%;
+  max-width:520px;
+}
+
+h2 {
+  text-align:center;
+  margin-bottom:20px;
+}
+
+.card {
+  background:white;
+  padding:28px;
+  border-radius:12px;
+  box-shadow:0 6px 18px rgba(0,0,0,.15);
+  margin-bottom:20px;
+}
+
+input {
+  width:100%;
+  padding:16px;
+  margin:14px 0;
+  font-size:18px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+
+button {
+  width:100%;
+  background:#27ae60;
+  color:white;
+  border:none;
+  padding:18px;
+  font-size:18px;
+  border-radius:8px;
+  cursor:pointer;
+  margin-top:14px;
+}
+
+button:hover {
+  background:#1e8449;
+}
+
+.info {
+  font-weight:bold;
+  font-size:18px;
+  margin:12px 0;
+}
+
+.hidden { display:none }
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>🚪 Exit Gate Control</h2>
+
+<!-- ================= LOGIN ================= -->
+<div class="card" id="loginCard">
+  <input id="adminIdInput" placeholder="Enter Admin ID">
+  <button onclick="verifyAdmin()">🔐 Verify Admin</button>
+</div>
+
+<!-- ================= EXIT ================= -->
+<div class="card hidden" id="exitCard">
+  <h3 id="mandirTitle" style="text-align:center;margin-bottom:15px"></h3>
+
+  <p id="batchInfo" class="info"></p>
+
+  <button onclick="batchOut()">📤 Batch Out (Early / On Time)</button>
+</div>
+
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyBeTQdKmRH788wMrQh4x-IkEt6lt4_rd4E",
+  databaseURL: "https://darshan-app-48a19-default-rtdb.firebaseio.com"
+});
+
+const db = firebase.database();
+
+let templeId = "";
+let batchSize = 0;
+let timePerBatch = 0;
+let lastEnd = 0;
+let batchStart = 0;
+let timer = null;
+
+// ================= VERIFY ADMIN =================
+function verifyAdmin(){
+  const adminId = adminIdInput.value.trim();
+  if(!adminId) return alert("Enter Admin ID");
+
+  db.ref("admins/"+adminId).once("value").then(s=>{
+    if(!s.exists()) return alert("❌ Invalid Admin ID");
+
+    templeId = s.val().templeId;
+    loadMandir();
+    loadSettings();
+    listenBatch();
+
+    loginCard.classList.add("hidden");
+    exitCard.classList.remove("hidden");
+  });
+}
+
+// ================= LOAD MANDIR =================
+function loadMandir(){
+  db.ref("mandirs/"+templeId).once("value").then(s=>{
+    mandirTitle.innerText =
+      "🛕 " + s.val().mandirName + " – Exit Gate";
+  });
+}
+
+// ================= LOAD SETTINGS =================
+function loadSettings(){
+  db.ref("batchSettings/"+templeId).once("value").then(s=>{
+    batchSize = s.val().peoplePerBatch;
+    timePerBatch = s.val().timePerBatch;
+  });
+}
+
+// ================= LISTEN BATCH =================
+function listenBatch(){
+  db.ref("nextBatch/"+templeId).on("value", s=>{
+    const data = s.val() || { lastEnd: 0, batchStart: 0 };
+
+    lastEnd = data.lastEnd || 0;
+    batchStart = data.batchStart || 0;
+
+    startTimer();
+    updateUI();
+  });
+}
+
+// ================= UPDATE UI =================
+function updateUI(){
+  const start = lastEnd + 1;
+  const end = start + batchSize - 1;
+
+  let text = `Current Batch: ${start} – ${end}`;
+
+  if(batchStart){
+    const elapsed = Math.floor((Date.now() - batchStart) / 1000);
+    const remaining = Math.max(timePerBatch*60 - elapsed, 0);
+    const min = Math.floor(remaining/60);
+    const sec = remaining % 60;
+    text += ` | Time Left: ${min}:${sec.toString().padStart(2,"0")}`;
+  } else {
+    text += " | Waiting to start";
+  }
+
+  batchInfo.innerText = text;
+}
+
+// ================= TIMER =================
+function startTimer(){
+  if(timer) clearInterval(timer);
+  timer = setInterval(updateUI, 1000);
+}
+
+// ================= BATCH OUT =================
+function batchOut(){
+  const newLastEnd = lastEnd + batchSize;
+
+  db.ref("nextBatch/"+templeId).set({
+    lastEnd: newLastEnd,
+    batchStart: Date.now()
+  });
+}
+</script>
+
+</body>
+</html>
