@@ -6,29 +6,141 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-body { font-family: Arial; background: #f0f4f8; text-align: center; padding: 20px }
-h2 { color: #2c3e50; }
-.card { background: white; max-width: 500px; margin: auto; padding: 20px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1) }
-input { width: 94%; padding: 10px; margin: 8px 0; font-size: 16px }
-button { background: #2c3e50; color: white; border: none; padding: 12px; font-size: 16px; border-radius: 5px; cursor: pointer; margin-top: 12px }
-button:hover { background: #1a252f }
-.success { color: green; font-weight: bold }
-.error { color: red; font-weight: bold }
-.hidden { display: none }
-small { color: #555; display:block; margin-top:6px }
+/* ================= ROOT ================= */
+:root{
+  --saffron:#ff9933;
+  --deep:#b85c00;
+  --light:#fff3e0;
+  --card:rgba(255,255,255,0.92);
+}
+
+*{box-sizing:border-box}
+
+/* ================= BODY ================= */
+body{
+  margin:0;
+  min-height:100vh;
+  font-family: "Segoe UI", Arial, sans-serif;
+  background:
+    linear-gradient(rgba(255,153,51,.88), rgba(255,200,120,.88)),
+    url("https://i.imgur.com/2RZ7K6R.png");
+  background-size:cover;
+  background-position:center;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+
+/* ================= CARD ================= */
+.card{
+  width:100%;
+  max-width:520px;
+  background:var(--card);
+  border-radius:18px;
+  padding:28px 26px 32px;
+  box-shadow:0 20px 50px rgba(0,0,0,.25);
+  backdrop-filter: blur(6px);
+  animation: floatIn .9s ease;
+}
+
+@keyframes floatIn{
+  from{opacity:0; transform:translateY(25px)}
+  to{opacity:1; transform:translateY(0)}
+}
+
+/* ================= HEAD ================= */
+h2{
+  margin-top:0;
+  text-align:center;
+  color:#5c2b00;
+}
+
+.subtitle{
+  text-align:center;
+  color:#7a3c00;
+  margin-bottom:18px;
+  font-size:15px;
+}
+
+/* ================= INPUT ================= */
+input{
+  width:100%;
+  padding:14px;
+  margin:10px 0;
+  font-size:16px;
+  border-radius:10px;
+  border:1px solid #d8b38a;
+  outline:none;
+}
+
+input:focus{
+  border-color:var(--saffron);
+  box-shadow:0 0 0 2px rgba(255,153,51,.2);
+}
+
+/* ================= BUTTON ================= */
+button{
+  width:100%;
+  margin-top:16px;
+  padding:15px;
+  font-size:17px;
+  border:none;
+  border-radius:30px;
+  cursor:pointer;
+  background:linear-gradient(135deg,var(--saffron),var(--deep));
+  color:white;
+  font-weight:600;
+  letter-spacing:.4px;
+  transition:.25s;
+}
+
+button:hover{
+  transform:translateY(-1px);
+  box-shadow:0 10px 25px rgba(184,92,0,.45);
+}
+
+/* ================= TEXT ================= */
+small{
+  display:block;
+  color:#6b4a2e;
+  font-size:13px;
+  margin-top:-4px;
+}
+
+.success{
+  color:#1e7e34;
+  font-weight:bold;
+}
+
+.error{
+  color:#c0392b;
+  font-weight:bold;
+}
+
+.hidden{display:none}
+
+/* ================= FOOT ================= */
+.footer-note{
+  text-align:center;
+  margin-top:14px;
+  font-size:13px;
+  color:#6b3a00;
+}
 </style>
 </head>
 
 <body>
 
-<h2>🛕 Mandir Admin Onboarding Portal</h2>
-
 <div class="card">
+
+  <h2>🛕 Mandir Admin Onboarding</h2>
+  <div class="subtitle">Register your Mandir into the Smart Darshan System</div>
 
   <input id="mandirName" placeholder="Mandir Name (Official)">
   <input id="latitude" type="number" step="any" placeholder="📍 Latitude (e.g. 27.5816)">
   <input id="longitude" type="number" step="any" placeholder="📍 Longitude (e.g. 77.7006)">
-  <small>⚠️ Prototype mode: Enter coordinates manually (Production will use auto-location)</small>
+  <small>⚠️ Prototype mode — manual coordinates</small>
 
   <input id="adminName" placeholder="Authorized Admin Full Name">
   <input id="phone" placeholder="Official Phone Number (+91XXXXXXXXXX)">
@@ -39,14 +151,15 @@ small { color: #555; display:block; margin-top:6px }
   <p id="statusMsg" class="hidden"></p>
   <p id="adminIdDisplay" class="success hidden"></p>
 
+  <div class="footer-note">🙏 Digital Darshan • Queue with Devotion</div>
+
 </div>
 
-<!-- Firebase -->
+<!-- ================= FIREBASE ================= -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-/* ================= FIREBASE ================= */
 firebase.initializeApp({
   apiKey: "AIzaSyBeTQdKmRH788wMrQh4x-IkEt6lt4_rd4E",
   authDomain: "darshan-app-48a19.firebaseapp.com",
@@ -58,41 +171,37 @@ firebase.initializeApp({
 const db = firebase.database();
 
 /* ================= PAYMENT (DEMO) ================= */
-function makePayment() {
+function makePayment(){
   const data = getData();
-  if (!data) return;
-
+  if(!data) return;
   setStatus("Processing payment & registering mandir…");
-
-  setTimeout(() => {
-    registerMandir(data);
-  }, 1000);
+  setTimeout(()=>registerMandir(data),1000);
 }
 
 /* ================= REGISTER ================= */
-function registerMandir(d) {
-  const templeId = d.mandirName.toLowerCase().replace(/[^a-z0-9]+/g, "_");
-  const adminId = "ADM-" + Math.floor(100000 + Math.random() * 900000);
+function registerMandir(d){
+  const templeId = d.mandirName.toLowerCase().replace(/[^a-z0-9]+/g,"_");
+  const adminId = "ADM-" + Math.floor(100000 + Math.random()*900000);
 
-  db.ref("mandirs/" + templeId).set({
-    mandirName: d.mandirName,
-    location: { lat: d.lat, lng: d.lng },
+  db.ref("mandirs/"+templeId).set({
+    mandirName:d.mandirName,
+    location:{lat:d.lat,lng:d.lng},
     adminId,
-    createdAt: Date.now()
+    createdAt:Date.now()
   });
 
-  db.ref("admins/" + adminId).set({
+  db.ref("admins/"+adminId).set({
     templeId,
-    name: d.adminName,
-    phone: d.phone,
-    email: d.email,
-    active: true,
-    createdAt: Date.now()
+    name:d.adminName,
+    phone:d.phone,
+    email:d.email,
+    active:true,
+    createdAt:Date.now()
   });
 
-  db.ref("batchSettings/" + templeId).set({
-    peoplePerBatch: 50,
-    timePerBatch: 10
+  db.ref("batchSettings/"+templeId).set({
+    peoplePerBatch:50,
+    timePerBatch:10
   });
 
   setStatus("✅ Mandir registered successfully");
@@ -101,54 +210,38 @@ function registerMandir(d) {
 }
 
 /* ================= HELPERS ================= */
-function getData() {
-  const mandirName = mandirNameInput();
+function getData(){
+  const mandirNameVal = mandirName.value.trim();
   const lat = parseFloat(latitude.value);
   const lng = parseFloat(longitude.value);
-  const adminName = adminNameInput();
-  const phone = phoneInput();
-  const email = emailInput();
+  const adminNameVal = adminName.value.trim();
+  const phoneVal = phone.value.trim();
+  const emailVal = email.value.trim();
 
-  if (!mandirName || !adminName || !phone || !email) {
-    setStatus("❌ Fill all fields", true);
-    return null;
+  if(!mandirNameVal||!adminNameVal||!phoneVal||!emailVal){
+    setStatus("❌ Fill all fields",true); return null;
+  }
+  if(isNaN(lat)||isNaN(lng)){
+    setStatus("❌ Invalid latitude / longitude",true); return null;
+  }
+  if(!/^\+91[6-9]\d{9}$/.test(phoneVal)){
+    setStatus("❌ Phone must be +91 followed by 10 digits",true); return null;
+  }
+  if(!/^[^@]+@gmail\.com$/.test(emailVal)){
+    setStatus("❌ Only valid Gmail ID allowed",true); return null;
   }
 
-  if (isNaN(lat) || isNaN(lng)) {
-    setStatus("❌ Invalid latitude / longitude", true);
-    return null;
-  }
-
-  // 📞 Phone: +91 followed by exactly 10 digits
-  const phoneRegex = /^\+91[6-9]\d{9}$/;
-  if (!phoneRegex.test(phone)) {
-    setStatus("❌ Phone must be +91 followed by 10 digits", true);
-    return null;
-  }
-
-  // 📧 Gmail only
-  const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
-  if (!gmailRegex.test(email)) {
-    setStatus("❌ Only valid Gmail ID allowed (abc@gmail.com)", true);
-    return null;
-  }
-
-  return { mandirName, lat, lng, adminName, phone, email };
+  return { mandirName:mandirNameVal, lat, lng, adminName:adminNameVal, phone:phoneVal, email:emailVal };
 }
 
-function setStatus(msg, isError=false) {
+function setStatus(msg,isError=false){
   const el = document.getElementById("statusMsg");
   el.innerText = msg;
   el.className = isError ? "error" : "success";
   el.classList.remove("hidden");
 }
-
-/* ================= INPUT SHORTCUTS ================= */
-function mandirNameInput(){ return mandirName.value.trim(); }
-function adminNameInput(){ return adminName.value.trim(); }
-function phoneInput(){ return phone.value.trim(); }
-function emailInput(){ return email.value.trim(); }
 </script>
 
 </body>
 </html>
+
