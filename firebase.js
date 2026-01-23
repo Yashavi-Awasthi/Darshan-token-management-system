@@ -92,3 +92,4 @@ function log(msg) {
 
 /* ===================================================== */
 console.log("✅ firebase.js ready (clean, safe, dynamic)");
+
