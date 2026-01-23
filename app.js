@@ -1,10 +1,10 @@
-/* =====================================================
+/* ===================================================== 
    Darshan App — app.js
-   Shared Utilities (User + Display)
+   Shared Utilities (Devotee / Display / Admin)
    Firebase v8 | Vanilla JS
    ===================================================== */
 
-console.log("✅ app.js loaded");
+console.log("🛕 app.js loaded");
 
 /* ================= FIREBASE INIT ================= */
 if (!firebase.apps.length) {
@@ -21,14 +21,21 @@ if (!firebase.apps.length) {
 const db = firebase.database();
 
 /* ================= CONSTANTS ================= */
-const LOCATION_RADIUS_KM = 3;
+const LOCATION_RADIUS_KM = 5; // must match devotee.html UI
+
+/* ================= USER SESSION ================= */
+const USER_ID =
+  localStorage.getItem("darshanUserId") ||
+  ("U-" + Date.now() + Math.floor(Math.random() * 1000));
+
+localStorage.setItem("darshanUserId", USER_ID);
 
 /* ================= URL HELPER ================= */
 function getQueryParam(key) {
   return new URLSearchParams(window.location.search).get(key);
 }
 
-/* ================= DISTANCE HELPER ================= */
+/* ================= DISTANCE CALC ================= */
 function getDistanceKm(lat1, lon1, lat2, lon2) {
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -43,20 +50,21 @@ function getDistanceKm(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
-/* ================= LOCATION CHECK ================= */
+/* ================= LOCATION VERIFICATION ================= */
 function verifyUserLocation(templeId, onSuccess, onFail) {
   if (!navigator.geolocation) {
-    alert("Geolocation not supported");
+    alert("❌ Geolocation not supported by browser");
     return;
   }
 
   db.ref("mandirs/" + templeId).once("value").then(snap => {
     if (!snap.exists()) {
-      alert("Invalid Mandir");
+      alert("❌ Invalid Mandir selected");
       return;
     }
 
-    const { lat, lng } = snap.val();
+    const loc = snap.val().location || snap.val();
+    const { lat, lng } = loc;
 
     navigator.geolocation.getCurrentPosition(
       pos => {
@@ -75,7 +83,7 @@ function verifyUserLocation(templeId, onSuccess, onFail) {
           onFail(distance);
         }
       },
-      () => alert("Please allow location access")
+      () => alert("❌ Please allow location access")
     );
   });
 }
@@ -85,29 +93,40 @@ function loadMandirDropdown(selectId) {
   const select = document.getElementById(selectId);
   if (!select) return;
 
+  select.innerHTML = `<option value="">Loading Mandirs…</option>`;
+
   db.ref("mandirs").once("value").then(snap => {
     select.innerHTML = `<option value="">-- Select Mandir --</option>`;
 
     snap.forEach(child => {
-      const id = child.key;
-      const m  = child.val();
+      const m = child.val();
+      if (!m) return;
 
       const opt = document.createElement("option");
-      opt.value = id;
-      opt.innerText = m.mandirName;
+      opt.value = child.key;
+      opt.innerText = m.mandirName || m.name || "Unnamed Mandir";
       select.appendChild(opt);
     });
   });
 }
 
-/* ================= FORMATTERS ================= */
-function formatTime(minutes) {
-  if (!minutes) return "0 min";
-  if (minutes < 60) return `${minutes} min`;
-  return `${Math.floor(minutes / 60)} hr ${minutes % 60} min`;
+/* ================= TOKEN HELPERS ================= */
+function getUserTokenRef(templeId) {
+  return db.ref(`userTokens/${USER_ID}/${templeId}`);
 }
 
-function now() {
+function clearUserToken(templeId) {
+  return getUserTokenRef(templeId).remove();
+}
+
+/* ================= TIME FORMATTERS ================= */
+function formatMinutes(mins) {
+  if (!mins || mins <= 0) return "0 min";
+  if (mins < 60) return `${mins} min`;
+  return `${Math.floor(mins / 60)} hr ${mins % 60} min`;
+}
+
+function nowTime() {
   return new Date().toLocaleTimeString();
 }
 
@@ -116,5 +135,17 @@ function log(msg) {
   console.log("🛕 Darshan:", msg);
 }
 
-/* ================= END ================= */
-console.log("✅ app.js fully integrated with dynamic mandir system");
+/* ================= EXPORT TO WINDOW ================= */
+window.DarshanApp = {
+  db,
+  USER_ID,
+  verifyUserLocation,
+  loadMandirDropdown,
+  formatMinutes,
+  clearUserToken,
+  getUserTokenRef,
+  log
+};
+
+console.log("✅ app.js ready | Main portal = index.html | Booking = devotee.html");
+
