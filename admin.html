@@ -5,78 +5,186 @@
 <title>👮 Mandir Admin Panel</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Mukta:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background: #eef2f5;
-  text-align: center;
-  padding: 20px;
-}
-h2 { color: #003366; }
-
-.card {
-  background: white;
-  padding: 20px;
-  margin: 20px auto;
-  max-width: 460px;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+:root{
+  --mandir-red:#8b0000;
+  --saffron:#ff9933;
+  --gold:#ffd700;
+  --bg:#fff7e6;
 }
 
-input, select {
-  width: 92%;
-  padding: 10px;
-  margin: 8px 0;
-  font-size: 16px;
+*{box-sizing:border-box}
+
+body{
+  font-family:Poppins,sans-serif;
+  background:var(--bg);
+  margin:0;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  min-height:100vh;
 }
 
-button {
-  background: #003366;
-  color: white;
-  border: none;
-  padding: 12px 20px;
-  font-size: 16px;
-  border-radius: 5px;
-  cursor: pointer;
-  margin-top: 10px;
+/* HEADER */
+header{
+  width:100%;
+  padding:25px;
+  background:linear-gradient(135deg,var(--mandir-red),#5e0000);
+  color:white;
+  text-align:center;
+  border-bottom:4px solid var(--gold);
 }
 
-button:hover { background: #004a99; }
+header h1{
+  font-family:Mukta,sans-serif;
+  margin:0;
+}
 
-.hidden { display: none; }
-.success { color: green; font-weight: bold; margin-top: 10px; }
-.info { font-weight: bold; color: #333; }
+header p{
+  margin-top:5px;
+  font-size:.9rem;
+  opacity:.9;
+}
+
+/* BACK LINK */
+.back-nav{
+  width:100%;
+  max-width:460px;
+  margin-top:15px;
+  padding:0 10px;
+}
+
+.back-nav a{
+  text-decoration:none;
+  color:var(--mandir-red);
+  font-weight:600;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+
+/* CARD */
+.card{
+  background:white;
+  width:92%;
+  max-width:460px;
+  margin:20px auto;
+  padding:30px;
+  border-radius:20px;
+  box-shadow:0 15px 35px rgba(139,0,0,.15);
+  animation:fadeIn .6s ease;
+}
+
+@keyframes fadeIn{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+h3{
+  color:var(--mandir-red);
+  border-bottom:2px solid #f3e0c7;
+  padding-bottom:10px;
+  margin-top:0;
+}
+
+input, select{
+  width:100%;
+  padding:14px;
+  margin:10px 0;
+  font-size:15px;
+  border-radius:12px;
+  border:1.5px solid #eee;
+}
+
+button{
+  width:100%;
+  background:linear-gradient(135deg,var(--mandir-red),#b30000);
+  color:white;
+  border:none;
+  padding:15px;
+  font-size:15px;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:600;
+  margin-top:10px;
+}
+
+button:hover{opacity:.95}
+
+.hidden{display:none}
+
+.info{
+  background:#fff4db;
+  padding:10px;
+  border-left:4px solid var(--saffron);
+  margin:10px 0;
+  font-size:.85rem;
+  color:#444;
+}
+
+.success{
+  color:green;
+  font-weight:600;
+  margin-top:10px;
+}
+
+/* FOOTER */
+footer{
+  margin-top:auto;
+  padding:20px;
+  font-size:.8rem;
+  color:#888;
+}
 </style>
 </head>
 
 <body>
 
-<h2>👮 Mandir Admin Control Panel</h2>
+<header>
+  <h1>👮 Mandir Admin Panel</h1>
+  <p>Secure Darshan Operations Control</p>
+</header>
+
+<div class="back-nav">
+  <a href="index.html">
+    <i class="fa-solid fa-arrow-left"></i> Back to Main Portal
+  </a>
+</div>
 
 <!-- ================= LOGIN ================= -->
 <div class="card" id="loginCard">
-  <h3>Admin Login</h3>
+  <h3><i class="fa-solid fa-lock"></i> Admin Login</h3>
 
   <select id="mandirSelect">
     <option value="">Select Your Mandir</option>
   </select>
 
-  <input type="password" id="adminIdInput" placeholder="Enter Admin ID (ADM-XXXXXX)">
-  <input type="text" id="phoneInput" placeholder="Enter Phone (+91XXXXXXXXXX)">
+  <input type="password" id="adminIdInput" placeholder="Admin ID (ADM-XXXXXX)">
+  <input type="text" id="phoneInput" placeholder="Phone Number (+91XXXXXXXXXX)">
 
-  <button onclick="sendOTP()">📲 Send OTP</button>
+  <button onclick="sendOTP()">
+    <i class="fa-solid fa-mobile-screen"></i> Send OTP
+  </button>
 
   <div id="otpSection" class="hidden">
     <input type="text" id="otpInput" placeholder="Enter OTP">
-    <button onclick="verifyOTP()">🔐 Verify & Login</button>
+    <button onclick="verifyOTP()">
+      <i class="fa-solid fa-shield-check"></i> Verify & Login
+    </button>
   </div>
 
-  <p class="info">OTP-protected admin access (simulated)</p>
+  <div class="info">
+    OTP-based admin access (demo mode)
+  </div>
 </div>
 
 <!-- ================= SETTINGS ================= -->
 <div class="card hidden" id="settingsCard">
-  <h3>🛕 Mandir Settings</h3>
+  <h3><i class="fa-solid fa-gear"></i> Mandir Settings</h3>
+
   <p class="info" id="mandirInfo"></p>
 
   <label>Darshan Start Time</label>
@@ -91,16 +199,23 @@ button:hover { background: #004a99; }
   <label>Time per Batch (minutes)</label>
   <input type="number" id="timePerBatch" min="1">
 
-  <button onclick="saveSettings()">💾 Save Settings</button>
+  <button onclick="saveSettings()">
+    <i class="fa-solid fa-floppy-disk"></i> Save Settings
+  </button>
+
   <p id="settingsStatus" class="success"></p>
 </div>
+
+<footer>
+  Authorized access only • Temple Administration 🛕
+</footer>
 
 <!-- ================= Firebase ================= -->
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
 <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
 <script>
-// ================= FIREBASE INIT =================
+/* ================= FIREBASE INIT ================= */
 firebase.initializeApp({
   apiKey: "AIzaSyBeTQdKmRH788wMrQh4x-IkEt6lt4_rd4E",
   authDomain: "darshan-app-48a19.firebaseapp.com",
@@ -115,9 +230,7 @@ const db = firebase.database();
 let templeId = "";
 let adminId = "";
 
-// ================= LOAD MANDIRS =================
-const mandirSelect = document.getElementById("mandirSelect");
-
+/* ================= LOAD MANDIRS ================= */
 db.ref("mandirs").on("value", snap => {
   mandirSelect.innerHTML = '<option value="">Select Your Mandir</option>';
   snap.forEach(child => {
@@ -128,87 +241,72 @@ db.ref("mandirs").on("value", snap => {
   });
 });
 
-// ================= SEND OTP (SIMULATED) =================
-function sendOTP() {
+/* ================= SEND OTP (SIMULATED) ================= */
+function sendOTP(){
   adminId = adminIdInput.value.trim();
   templeId = mandirSelect.value;
   const phone = phoneInput.value.trim();
 
-  if (!templeId) return alert("Select your mandir");
-  if (!adminId) return alert("Enter Admin ID");
-  if (!phone) return alert("Enter phone number");
+  if(!templeId || !adminId || !phone){
+    alert("Fill all login details");
+    return;
+  }
 
-  // Verify admin exists
   db.ref("admins/" + adminId).once("value").then(snap => {
-    if (!snap.exists() || snap.val().templeId !== templeId) {
-      alert("❌ Invalid Admin ID for selected mandir");
+    if(!snap.exists() || snap.val().templeId !== templeId){
+      alert("❌ Invalid Admin ID");
       return;
     }
 
-    const otp = Math.floor(100000 + Math.random() * 900000);
+    const otp = Math.floor(100000 + Math.random()*900000);
 
     db.ref("adminOTP/" + adminId).set({
       otp,
       createdAt: Date.now(),
-      expiresIn: 120000 // 2 minutes
+      expiresIn: 120000
     });
 
-    console.log("🔐 OTP (Demo):", otp); // for judges/demo
-    alert("✅ OTP generated (demo mode)");
+    console.log("🔐 OTP (Demo):", otp);
+    alert("✅ OTP generated (demo)");
 
     otpSection.classList.remove("hidden");
   });
 }
 
-// ================= VERIFY OTP =================
-function verifyOTP() {
-  const enteredOTP = otpInput.value.trim();
-
-  if (!enteredOTP) return alert("Enter OTP");
+/* ================= VERIFY OTP ================= */
+function verifyOTP(){
+  const entered = otpInput.value.trim();
+  if(!entered) return alert("Enter OTP");
 
   db.ref("adminOTP/" + adminId).once("value").then(snap => {
-    if (!snap.exists()) return alert("OTP expired");
+    if(!snap.exists()) return alert("OTP expired");
 
-    const data = snap.val();
+    const d = snap.val();
+    if(Date.now() - d.createdAt > d.expiresIn) return alert("OTP expired");
+    if(entered != d.otp) return alert("Invalid OTP");
 
-    if (Date.now() - data.createdAt > data.expiresIn) {
-      alert("❌ OTP expired");
-      return;
-    }
-
-    if (enteredOTP != data.otp) {
-      alert("❌ Invalid OTP");
-      return;
-    }
-
-    // OTP verified
     db.ref("adminOTP/" + adminId).remove();
-    verifyAdmin();
+    loginCard.classList.add("hidden");
+    settingsCard.classList.remove("hidden");
+
+    loadMandirInfo();
+    loadSettings();
   });
 }
 
-// ================= ADMIN VERIFY =================
-function verifyAdmin() {
-  loadMandirInfo();
-  loadSettings();
-
-  loginCard.classList.add("hidden");
-  settingsCard.classList.remove("hidden");
-}
-
-// ================= LOAD MANDIR INFO =================
-function loadMandirInfo() {
+/* ================= LOAD INFO ================= */
+function loadMandirInfo(){
   db.ref("mandirs/" + templeId).once("value").then(snap => {
     const m = snap.val();
     mandirInfo.innerText =
-      `Mandir: ${m.mandirName} | Location: Lat ${m.location.lat}, Lng ${m.location.lng}`;
+      `Mandir: ${m.mandirName} | Lat ${m.location.lat}, Lng ${m.location.lng}`;
   });
 }
 
-// ================= LOAD SETTINGS =================
-function loadSettings() {
+/* ================= LOAD SETTINGS ================= */
+function loadSettings(){
   db.ref("batchSettings/" + templeId).once("value").then(snap => {
-    if (!snap.exists()) return;
+    if(!snap.exists()) return;
     const d = snap.val();
     startTime.value = d.startTime || "";
     endTime.value = d.endTime || "";
@@ -217,8 +315,8 @@ function loadSettings() {
   });
 }
 
-// ================= SAVE SETTINGS =================
-function saveSettings() {
+/* ================= SAVE SETTINGS ================= */
+function saveSettings(){
   const data = {
     startTime: startTime.value,
     endTime: endTime.value,
@@ -227,12 +325,12 @@ function saveSettings() {
     updatedAt: Date.now()
   };
 
-  if (!data.startTime || !data.endTime || !data.peoplePerBatch || !data.timePerBatch) {
+  if(!data.startTime || !data.endTime || !data.peoplePerBatch || !data.timePerBatch){
     alert("Fill all fields");
     return;
   }
 
-  db.ref("batchSettings/" + templeId).set(data).then(() => {
+  db.ref("batchSettings/" + templeId).set(data).then(()=>{
     settingsStatus.innerText = "✅ Settings saved successfully";
   });
 }
@@ -240,3 +338,4 @@ function saveSettings() {
 
 </body>
 </html>
+
