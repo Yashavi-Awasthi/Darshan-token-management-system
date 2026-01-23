@@ -5,80 +5,132 @@
 <title>🚪 Mandir Entry Gate</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Mukta:wght@600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background:#eef3f7;
-  display:flex;
-  justify-content:center;
-  align-items:flex-start;
-  padding:30px 15px;
+:root{
+  --saffron:#ff9933;
+  --gold:#ffd700;
+  --mandir:#8b0000;
 }
 
-.container {
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:Poppins,sans-serif;
+  background:
+    linear-gradient(rgba(0,0,0,.75),rgba(0,0,0,.85)),
+    url("https://images.unsplash.com/photo-1589140915721-6b9f82b4c4c8");
+  background-size:cover;
+  background-position:center;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:30px 15px;
+  color:white;
+}
+
+.container{
   width:100%;
   max-width:520px;
 }
 
-h2 {
+h2{
+  font-family:Mukta,sans-serif;
   text-align:center;
-  margin-bottom:20px;
+  font-size:2.2rem;
+  margin-bottom:25px;
+  color:var(--gold);
+  letter-spacing:1px;
 }
 
-.card {
-  background:white;
+.card{
+  background:rgba(255,255,255,.1);
+  border:2px solid rgba(255,215,0,.4);
+  border-radius:22px;
   padding:28px;
-  border-radius:12px;
-  box-shadow:0 6px 18px rgba(0,0,0,.15);
+  box-shadow:0 0 35px rgba(255,153,51,.25);
+  backdrop-filter:blur(6px);
   margin-bottom:20px;
+  animation:fade .6s ease;
 }
 
-input {
+@keyframes fade{
+  from{opacity:0;transform:translateY(20px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+input{
   width:100%;
   padding:16px;
   margin:14px 0;
   font-size:18px;
-  border-radius:8px;
-  border:1px solid #ccc;
+  border-radius:12px;
+  border:none;
+  outline:none;
 }
 
-button {
+input::placeholder{
+  font-size:18px;
+  color:#ccc;
+}
+
+button{
   width:100%;
-  background:#2c3e50;
-  color:white;
-  border:none;
   padding:16px;
   font-size:18px;
-  border-radius:8px;
+  border:none;
+  border-radius:12px;
   cursor:pointer;
+  font-weight:600;
   margin-top:12px;
+  transition:.25s;
 }
 
-button:hover {
-  background:#1a252f;
+.primary{
+  background:linear-gradient(135deg,var(--saffron),var(--gold));
+  color:#3b1d00;
 }
 
-.info {
-  font-weight:bold;
+.primary:hover{
+  transform:translateY(-2px);
+  box-shadow:0 6px 16px rgba(255,215,0,.4);
+}
+
+.secondary{
+  background:#1e2a36;
+  color:white;
+}
+
+.secondary:hover{
+  background:#111820;
+}
+
+.info{
+  font-weight:600;
   font-size:18px;
   margin:12px 0;
+  color:#ffe9c4;
 }
 
-.success {
-  color:green;
+.success{
+  color:#90ee90;
   font-weight:bold;
   font-size:18px;
   margin-top:10px;
 }
 
-.error {
-  color:red;
+.error{
+  color:#ff7b7b;
   font-weight:bold;
   font-size:18px;
   margin-top:10px;
 }
 
-.hidden { display:none }
+.hidden{display:none}
 </style>
 </head>
 
@@ -86,26 +138,21 @@ button:hover {
 
 <div class="container">
 
-<h2>🚪 Entry Gate Control</h2>
+<h2>🚪 Mandir Entry Gate</h2>
 
-<!-- ================= LOGIN ================= -->
+<!-- Admin Login -->
 <div class="card" id="loginCard">
   <input id="adminIdInput" placeholder="Enter Admin ID">
-  <button onclick="verifyAdmin()">🔐 Verify Admin</button>
+  <button class="primary" onclick="verifyAdmin()">🔐 Verify Admin</button>
 </div>
 
-<!-- ================= ENTRY ================= -->
+<!-- Entry Interface -->
 <div class="card hidden" id="entryCard">
-  <h3 id="mandirTitle" style="text-align:center;margin-bottom:15px"></h3>
-
+  <h3 id="mandirTitle" style="text-align:center;margin-bottom:15px;color:var(--saffron)"></h3>
   <p id="batchInfo" class="info"></p>
-
+  <p id="timerInfo" class="info"></p>
   <input id="tokenInput" type="number" placeholder="Enter Token Number">
-
-  <button onclick="verifyToken()">✅ Verify Token</button>
-
-  <button onclick="batchEntered()">🚪 Batch Entered</button>
-
+  <button class="primary" onclick="verifyToken()">✅ Verify Token</button>
   <p id="result"></p>
 </div>
 
@@ -124,8 +171,11 @@ const db = firebase.database();
 
 let templeId = "";
 let batchSize = 0;
-let lastEnd = 0;
-let batchStart = 0;
+let timePerBatch = 5;
+let dayStart = 1;
+let currentBatchStart = 1;
+let batchStartTime = 0;
+let timerInterval = null;
 
 // ================= VERIFY ADMIN =================
 function verifyAdmin(){
@@ -136,7 +186,6 @@ function verifyAdmin(){
     if(!s.exists()) return alert("❌ Invalid Admin");
 
     templeId = s.val().templeId;
-
     loadMandir();
     loadSettings();
     listenBatch();
@@ -149,46 +198,57 @@ function verifyAdmin(){
 // ================= LOAD MANDIR =================
 function loadMandir(){
   db.ref("mandirs/"+templeId).once("value").then(s=>{
-    mandirTitle.innerText =
-      "🛕 " + s.val().mandirName + " – Entry Gate";
+    mandirTitle.innerText = "🛕 " + s.val().mandirName + " – Entry Gate";
   });
 }
 
 // ================= LOAD SETTINGS =================
 function loadSettings(){
   db.ref("batchSettings/"+templeId).once("value").then(s=>{
-    batchSize = s.val().peoplePerBatch;
+    batchSize = s.val().peoplePerBatch || 5;
+    timePerBatch = s.val().timePerBatch || 5;
   });
 }
 
-// ================= LISTEN BATCH =================
+// ================= LISTEN CURRENT BATCH (SYNC WITH EXIT) =================
 function listenBatch(){
   db.ref("nextBatch/"+templeId).on("value", s=>{
-    const data = s.val() || { lastEnd: 0, batchStart: 0 };
-    lastEnd = data.lastEnd || 0;
-    batchStart = data.batchStart || 0;
+    const data = s.val() || { dayStart: 1, currentBatchStart: 1, batchStartTime: Date.now() };
+    dayStart = data.dayStart || 1;
+    currentBatchStart = data.currentBatchStart || dayStart;
+    batchStartTime = data.batchStartTime || Date.now();
     updateUI();
+    startTimer();
   });
 }
 
 // ================= UPDATE UI =================
 function updateUI(){
-  const start = lastEnd + 1;
-  const end = start + batchSize - 1;
+  const currentBatchEnd = currentBatchStart + batchSize - 1;
+  batchInfo.innerText = `Current Batch Tokens: ${currentBatchStart} – ${currentBatchEnd} | Status: INSIDE`;
 
-  let text = `Current Batch Tokens: ${start} – ${end}`;
-  text += batchStart ? " | Status: ACTIVE" : " | Status: WAITING";
+  // Update timer
+  const now = Date.now();
+  const elapsedSec = Math.floor((now - batchStartTime)/1000);
+  const totalSec = timePerBatch*60;
+  const remainingSec = Math.max(totalSec - elapsedSec, 0);
+  const min = Math.floor(remainingSec/60);
+  const sec = remainingSec % 60;
+  timerInfo.innerText = `⏱️ Time Remaining: ${min}:${sec.toString().padStart(2,"0")}`;
+}
 
-  batchInfo.innerText = text;
+// ================= TIMER =================
+function startTimer(){
+  if(timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(updateUI, 1000);
 }
 
 // ================= VERIFY TOKEN =================
 function verifyToken(){
   const t = Number(tokenInput.value);
-  const start = lastEnd + 1;
-  const end = start + batchSize - 1;
+  const currentBatchEnd = currentBatchStart + batchSize - 1;
 
-  if(t < start || t > end){
+  if(t < currentBatchStart || t > currentBatchEnd){
     result.innerText = "❌ Token not in current batch";
     result.className = "error";
   } else {
@@ -196,16 +256,8 @@ function verifyToken(){
     result.className = "success";
   }
 }
-
-// ================= BATCH ENTERED =================
-function batchEntered(){
-  if(batchStart) return alert("Batch already active");
-
-  db.ref("nextBatch/"+templeId).update({
-    batchStart: Date.now()
-  });
-}
 </script>
 
 </body>
 </html>
+
