@@ -5,66 +5,111 @@
 <title>🚪 Mandir Exit Gate</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Mukta:wght@600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 <style>
-body {
-  font-family: Arial, sans-serif;
-  background:#f4f6f8;
-  display:flex;
-  justify-content:center;
-  align-items:flex-start;
-  padding:30px 15px;
+:root{
+  --saffron:#ff9933;
+  --gold:#ffd700;
+  --deep:#3b1d00;
 }
 
-.container {
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:Poppins,sans-serif;
+  background:
+    linear-gradient(rgba(0,0,0,.75),rgba(0,0,0,.88)),
+    url("https://images.unsplash.com/photo-1600788916036-9c46e89f3f8d");
+  background-size:cover;
+  background-position:center;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:30px 15px;
+  color:white;
+}
+
+.container{
   width:100%;
   max-width:520px;
 }
 
-h2 {
+h2{
+  font-family:Mukta,sans-serif;
   text-align:center;
-  margin-bottom:20px;
+  font-size:2.2rem;
+  margin-bottom:25px;
+  color:var(--gold);
+  letter-spacing:1px;
 }
 
-.card {
-  background:white;
+.card{
+  background:rgba(255,255,255,.1);
+  border:2px solid rgba(255,215,0,.4);
+  border-radius:22px;
   padding:28px;
-  border-radius:12px;
-  box-shadow:0 6px 18px rgba(0,0,0,.15);
+  box-shadow:0 0 35px rgba(255,153,51,.25);
+  backdrop-filter:blur(6px);
   margin-bottom:20px;
+  animation:fade .6s ease;
 }
 
-input {
+@keyframes fade{
+  from{opacity:0;transform:translateY(20px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+input{
   width:100%;
   padding:16px;
   margin:14px 0;
   font-size:18px;
-  border-radius:8px;
-  border:1px solid #ccc;
+  border-radius:12px;
+  border:none;
+  outline:none;
 }
 
-button {
+/* Make placeholder standard size */
+input::placeholder{
+  font-size:18px;
+  color:#ccc;
+}
+
+button{
   width:100%;
-  background:#27ae60;
-  color:white;
-  border:none;
   padding:18px;
   font-size:18px;
-  border-radius:8px;
+  border:none;
+  border-radius:14px;
   cursor:pointer;
+  font-weight:600;
   margin-top:14px;
+  transition:.25s;
 }
 
-button:hover {
-  background:#1e8449;
+.primary{
+  background:linear-gradient(135deg,var(--saffron),var(--gold));
+  color:var(--deep);
 }
 
-.info {
-  font-weight:bold;
+.primary:hover{
+  transform:translateY(-2px);
+  box-shadow:0 6px 16px rgba(255,215,0,.45);
+}
+
+.info{
+  font-weight:600;
   font-size:18px;
-  margin:12px 0;
+  margin:14px 0;
+  color:#ffe6c1;
+  text-align:center;
 }
 
-.hidden { display:none }
+.hidden{display:none}
 </style>
 </head>
 
@@ -72,21 +117,20 @@ button:hover {
 
 <div class="container">
 
-<h2>🚪 Exit Gate Control</h2>
+<h2>🚪 Mandir Exit Gate</h2>
 
-<!-- ================= LOGIN ================= -->
+<!-- Admin Login -->
 <div class="card" id="loginCard">
   <input id="adminIdInput" placeholder="Enter Admin ID">
-  <button onclick="verifyAdmin()">🔐 Verify Admin</button>
+  <button class="primary" onclick="verifyAdmin()">🔐 Verify Admin</button>
 </div>
 
-<!-- ================= EXIT ================= -->
+<!-- Exit Interface -->
 <div class="card hidden" id="exitCard">
-  <h3 id="mandirTitle" style="text-align:center;margin-bottom:15px"></h3>
-
+  <h3 id="mandirTitle" style="text-align:center;margin-bottom:15px;color:var(--saffron)"></h3>
   <p id="batchInfo" class="info"></p>
-
-  <button onclick="batchOut()">📤 Batch Out (Early / On Time)</button>
+  <p id="timerInfo" class="info"></p>
+  <button class="primary" onclick="batchOut()">📤 Batch Out (Next Batch)</button>
 </div>
 
 </div>
@@ -104,10 +148,11 @@ const db = firebase.database();
 
 let templeId = "";
 let batchSize = 0;
-let timePerBatch = 0;
-let lastEnd = 0;
-let batchStart = 0;
-let timer = null;
+let timePerBatch = 5; // default 5 minutes if not set in Firebase
+let dayStart = 1;
+let currentBatchStart = 1;
+let batchStartTime = 0;
+let timerInterval = null;
 
 // ================= VERIFY ADMIN =================
 function verifyAdmin(){
@@ -130,68 +175,70 @@ function verifyAdmin(){
 // ================= LOAD MANDIR =================
 function loadMandir(){
   db.ref("mandirs/"+templeId).once("value").then(s=>{
-    mandirTitle.innerText =
-      "🛕 " + s.val().mandirName + " – Exit Gate";
+    mandirTitle.innerText = "🛕 " + s.val().mandirName + " – Exit Gate";
   });
 }
 
 // ================= LOAD SETTINGS =================
 function loadSettings(){
   db.ref("batchSettings/"+templeId).once("value").then(s=>{
-    batchSize = s.val().peoplePerBatch;
-    timePerBatch = s.val().timePerBatch;
+    batchSize = s.val().peoplePerBatch || 5;
+    timePerBatch = s.val().timePerBatch || 5; // in minutes
   });
 }
 
 // ================= LISTEN BATCH =================
 function listenBatch(){
   db.ref("nextBatch/"+templeId).on("value", s=>{
-    const data = s.val() || { lastEnd: 0, batchStart: 0 };
-
-    lastEnd = data.lastEnd || 0;
-    batchStart = data.batchStart || 0;
-
-    startTimer();
+    const data = s.val() || { dayStart: 1, currentBatchStart: 1, batchStartTime: 0 };
+    dayStart = data.dayStart || 1;
+    currentBatchStart = data.currentBatchStart || dayStart;
+    batchStartTime = data.batchStartTime || Date.now();
     updateUI();
+    startTimer();
   });
 }
 
 // ================= UPDATE UI =================
 function updateUI(){
-  const start = lastEnd + 1;
-  const end = start + batchSize - 1;
+  const currentBatchEnd = currentBatchStart + batchSize - 1;
+  batchInfo.innerText = `Current Batch Tokens: ${currentBatchStart} – ${currentBatchEnd} | Status: INSIDE`;
 
-  let text = `Current Batch: ${start} – ${end}`;
-
-  if(batchStart){
-    const elapsed = Math.floor((Date.now() - batchStart) / 1000);
-    const remaining = Math.max(timePerBatch*60 - elapsed, 0);
-    const min = Math.floor(remaining/60);
-    const sec = remaining % 60;
-    text += ` | Time Left: ${min}:${sec.toString().padStart(2,"0")}`;
-  } else {
-    text += " | Waiting to start";
-  }
-
-  batchInfo.innerText = text;
+  // Update timer
+  const now = Date.now();
+  const elapsedSec = Math.floor((now - batchStartTime)/1000);
+  const totalSec = timePerBatch*60;
+  const remainingSec = Math.max(totalSec - elapsedSec,0);
+  const min = Math.floor(remainingSec/60);
+  const sec = remainingSec%60;
+  timerInfo.innerText = `⏱️ Time Remaining: ${min}:${sec.toString().padStart(2,"0")}`;
 }
 
 // ================= TIMER =================
 function startTimer(){
-  if(timer) clearInterval(timer);
-  timer = setInterval(updateUI, 1000);
+  if(timerInterval) clearInterval(timerInterval);
+  timerInterval = setInterval(updateUI, 1000);
 }
 
 // ================= BATCH OUT =================
 function batchOut(){
-  const newLastEnd = lastEnd + batchSize;
+  const currentBatchEnd = currentBatchStart + batchSize - 1;
+  alert(`Batch ${currentBatchStart} – ${currentBatchEnd} exited ✅`);
 
-  db.ref("nextBatch/"+templeId).set({
-    lastEnd: newLastEnd,
-    batchStart: Date.now()
+  // Move to next batch
+  currentBatchStart += batchSize;
+  batchStartTime = Date.now();
+
+  // Update in Firebase for full sync
+  db.ref("nextBatch/"+templeId).update({
+    currentBatchStart: currentBatchStart,
+    batchStartTime: batchStartTime
   });
+
+  updateUI();
 }
 </script>
 
 </body>
 </html>
+
