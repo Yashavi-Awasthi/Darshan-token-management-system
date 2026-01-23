@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>🛕 Devotee Token Booking</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&family=Mukta:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+:root{
+  --mandir-red:#8b0000;
+  --saffron:#ff9933;
+  --gold:#ffd700;
+}
+
+*{box-sizing:border-box}
+
+body{
+  font-family:Poppins,sans-serif;
+  margin:0;
+  min-height:100vh;
+  background:
+    linear-gradient(rgba(255,247,230,.9),rgba(255,247,230,.95)),
+    url("https://images.unsplash.com/photo-1601049541289-9b1b7bbbfe19");
+  background-size:cover;
+  background-position:center;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
+
+header{
+  width:100%;
+  padding:25px;
+  background:linear-gradient(135deg,var(--mandir-red),#5e0000);
+  color:white;
+  text-align:center;
+  border-bottom:4px solid var(--gold);
+}
+
+header h1{font-family:Mukta,sans-serif;margin:0}
+
+.card{
+  background:white;
+  width:92%;
+  max-width:480px;
+  margin:20px auto;
+  padding:30px;
+  border-radius:20px;
+  box-shadow:0 15px 35px rgba(139,0,0,.15);
+}
+
+h3{
+  color:var(--mandir-red);
+  border-bottom:2px solid #f3e0c7;
+  padding-bottom:10px;
+}
+
+input,select{
+  width:100%;
+  padding:14px;
+  margin:12px 0;
+  font-size:16px;
+  border-radius:12px;
+  border:1.5px solid #eee;
+}
+
+button{
+  width:100%;
+  background:linear-gradient(135deg,var(--mandir-red),#b30000);
+  color:white;
+  border:none;
+  padding:16px;
+  font-size:16px;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:600;
+  margin-top:10px;
+}
+
+.hidden{display:none}
+
+.info{
+  background:#fff4db;
+  padding:10px;
+  border-left:4px solid var(--saffron);
+  margin:10px 0;
+  font-size:.9rem;
+}
+
+.status{margin-top:10px;font-weight:bold}
+
+.ticket{
+  border:2px dashed var(--mandir-red);
+  padding:15px;
+  margin-top:15px;
+  background:#fffcf5;
+  text-align:center;
+}
+
+footer{
+  margin-top:auto;
+  padding:20px;
+  font-size:.8rem;
+  color:#888;
+}
+
+@media print{
+  body *{visibility:hidden}
+  .ticket, .ticket *{visibility:visible}
+  .ticket{
+    position:absolute;
+    left:0; top:0;
+    width:100%;
+    border:none;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>🛕 DARSHAN</h1>
+  <p>Smart Queue-less Darshan System</p>
+</header>
+
+<div class="card">
+  <h3>Select Mandir</h3>
+  <select id="templeSelect">
+    <option value="">Loading mandirs…</option>
+  </select>
+  <div class="info">📍 Geo-fencing enabled (within 5 km)</div>
+  <button id="verifyBtn">Verify Location</button>
+  <div id="locationStatus" class="status"></div>
+</div>
+
+<div id="details" class="card hidden">
+  <h3>Devotee Details</h3>
+  <input id="nameInput" placeholder="Devotee Name (optional)">
+  <input type="number" id="count" min="1" max="10" placeholder="Number of people">
+  <div class="info">₹2 per token</div>
+  <button id="payBtn">Pay & Generate Token</button>
+</div>
+
+<div id="result" class="card hidden"></div>
+
+<footer>
+  Designed for peaceful and disciplined Darshan 🙏
+</footer>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyBeTQdKmRH788wMrQh4x-IkEt6lt4_rd4E",
+  databaseURL: "https://darshan-app-48a19-default-rtdb.firebaseio.com"
+});
+
+const db = firebase.database();
+
+let selectedTemple="", batchSize=0, timePerBatch=0;
+let myLastToken=0, countdownInterval=null;
+
+const details=document.getElementById("details");
+const result=document.getElementById("result");
+
+/* Load mandirs */
+db.ref("mandirs").on("value", snap=>{
+  templeSelect.innerHTML='<option value="">-- Select Mandir --</option>';
+  snap.forEach(c=>{
+    templeSelect.innerHTML+=`<option value="${c.key}">${c.val().mandirName}</option>`;
+  });
+});
+
+/* Verify */
+verifyBtn.onclick=()=>{
+  selectedTemple=templeSelect.value;
+  if(!selectedTemple) return alert("Select mandir");
+
+  db.ref("batchSettings/"+selectedTemple).once("value").then(s=>{
+    batchSize=s.val().peoplePerBatch;
+    timePerBatch=s.val().timePerBatch;
+    details.classList.remove("hidden");
+    locationStatus.innerText="✅ Location verified";
+  });
+};
+
+/* Generate Token */
+payBtn.onclick=()=>{
+  const count=parseInt(document.getElementById("count").value);
+  if(!count) return alert("Enter number of people");
+
+  const amount=count*2;
+  if(!confirm(`Confirm payment of ₹${amount}?`)) return;
+
+  const ref=db.ref("nextBatch/"+selectedTemple);
+  ref.once("value").then(s=>{
+    const lastEnd=s.val()?.lastEnd||0;
+    const tokens=[];
+    for(let i=1;i<=count;i++) tokens.push(lastEnd+i);
+    myLastToken=lastEnd+count;
+
+    ref.set({lastEnd:myLastToken});
+
+    showTicket(tokens,amount);
+    startCountdown();
+  });
+};
+
+function showTicket(tokens,amount){
+  result.classList.remove("hidden");
+  result.innerHTML=`
+    <h3>🎫 Your Tokens</h3>
+    <h5> You will be notified when you are two batches away! </h5>
+    <div class="ticket">
+      <p><b>Token No:</b> ${tokens.join(", ")}</p>
+      <p><b>Paid:</b> ₹${amount}</p>
+      <p id="waitTime">Calculating wait time…</p>
+      <button onclick="window.print()">🖨️ Print Token</button>
+    </div>
+  `;
+}
+
+function startCountdown(){
+  clearInterval(countdownInterval);
+
+  countdownInterval=setInterval(()=>{
+    db.ref("currentToken/"+selectedTemple).once("value").then(s=>{
+      const current=s.val()||0;
+      const batchesLeft=Math.ceil((myLastToken-current)/batchSize);
+      const mins=batchesLeft*timePerBatch;
+
+      document.getElementById("waitTime").innerText=
+        mins>0 ? `⏳ Approx Wait: ${mins} min` : "🙏 Your darshan time has arrived";
+
+      if(batchesLeft===2){
+        alert("🔔 Your darshan time is approaching soon!");
+      }
+    });
+  },60000);
+}
+</script>
+
+</body>
+</html>
