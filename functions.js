@@ -59,3 +59,4 @@ exports.notifyUpcomingBatch = functions.database
 
     return null;
   });
+
