@@ -177,7 +177,8 @@ footer{
   </div>
 
   <div class="info">
-    OTP-based admin access (demo mode)
+    OTP-based admin access (demo mode)<br>
+    For demo, enter <strong>123</strong> as OTP
   </div>
 </div>
 
@@ -241,7 +242,7 @@ db.ref("mandirs").on("value", snap => {
   });
 });
 
-/* ================= SEND OTP (SIMULATED) ================= */
+/* ================= SEND OTP (DEMO MODE) ================= */
 function sendOTP(){
   adminId = adminIdInput.value.trim();
   templeId = mandirSelect.value;
@@ -252,46 +253,24 @@ function sendOTP(){
     return;
   }
 
-  db.ref("admins/" + adminId).once("value").then(snap => {
-    if(!snap.exists() || snap.val().templeId !== templeId){
-      alert("❌ Invalid Admin ID");
-      return;
-    }
-
-    const otp = Math.floor(100000 + Math.random()*900000);
-
-    db.ref("adminOTP/" + adminId).set({
-      otp,
-      createdAt: Date.now(),
-      expiresIn: 120000
-    });
-
-    console.log("🔐 OTP (Demo):", otp);
-    alert("✅ OTP generated (demo)");
-
-    otpSection.classList.remove("hidden");
-  });
+  // Demo mode bypass
+  otpSection.classList.remove("hidden");
+  alert("✅ OTP (Demo Mode) ready — enter 123 to continue");
 }
 
-/* ================= VERIFY OTP ================= */
+/* ================= VERIFY OTP (DEMO MODE) ================= */
 function verifyOTP(){
   const entered = otpInput.value.trim();
   if(!entered) return alert("Enter OTP");
 
-  db.ref("adminOTP/" + adminId).once("value").then(snap => {
-    if(!snap.exists()) return alert("OTP expired");
+  // Demo mode: OTP is 123
+  if(entered !== "123") return alert("Invalid OTP (Demo Mode)");
 
-    const d = snap.val();
-    if(Date.now() - d.createdAt > d.expiresIn) return alert("OTP expired");
-    if(entered != d.otp) return alert("Invalid OTP");
+  loginCard.classList.add("hidden");
+  settingsCard.classList.remove("hidden");
 
-    db.ref("adminOTP/" + adminId).remove();
-    loginCard.classList.add("hidden");
-    settingsCard.classList.remove("hidden");
-
-    loadMandirInfo();
-    loadSettings();
-  });
+  loadMandirInfo();
+  loadSettings();
 }
 
 /* ================= LOAD INFO ================= */
