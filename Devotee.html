@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -208,7 +207,7 @@ payBtn.onclick=()=>{
     ref.set({lastEnd:myLastToken});
 
     showTicket(tokens,amount);
-    startCountdown();
+    startCountdown(); // 🔥 immediate calculation
   });
 };
 
@@ -226,25 +225,30 @@ function showTicket(tokens,amount){
   `;
 }
 
+/* 🔥 Faster wait-time calculation */
 function startCountdown(){
   clearInterval(countdownInterval);
 
-  countdownInterval=setInterval(()=>{
+  const updateWaitTime = () => {
     db.ref("currentToken/"+selectedTemple).once("value").then(s=>{
       const current=s.val()||0;
       const batchesLeft=Math.ceil((myLastToken-current)/batchSize);
       const mins=batchesLeft*timePerBatch;
 
-      document.getElementById("waitTime").innerText=
+      document.getElementById("waitTime").innerText =
         mins>0 ? `⏳ Approx Wait: ${mins} min` : "🙏 Your darshan time has arrived";
 
       if(batchesLeft===2){
         alert("🔔 Your darshan time is approaching soon!");
       }
     });
-  },60000);
+  };
+
+  updateWaitTime();               // ✅ instant update
+  countdownInterval=setInterval(updateWaitTime, 5000); // 🔥 every 5 seconds
 }
 </script>
 
 </body>
 </html>
+
