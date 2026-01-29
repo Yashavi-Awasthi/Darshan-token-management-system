@@ -144,7 +144,18 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Mobile fixes */
+        /* Desktop symmetry fix ONLY */
+        @media (min-width: 1024px) {
+            .grid {
+                grid-template-columns: repeat(3, 1fr);
+                justify-items: center;
+            }
+            .card {
+                width: 100%;
+            }
+        }
+
+        /* Mobile fixes (unchanged) */
         @media (max-width: 480px) {
             .wrapper {
                 justify-content: flex-start;
