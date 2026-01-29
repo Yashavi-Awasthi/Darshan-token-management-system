@@ -73,7 +73,6 @@ input{
   outline:none;
 }
 
-/* Make placeholder standard size */
 input::placeholder{
   font-size:18px;
   color:#ccc;
@@ -119,13 +118,11 @@ button{
 
 <h2>🚪 Mandir Exit Gate</h2>
 
-<!-- Admin Login -->
 <div class="card" id="loginCard">
   <input id="adminIdInput" placeholder="Enter Admin ID">
   <button class="primary" onclick="verifyAdmin()">🔐 Verify Admin</button>
 </div>
 
-<!-- Exit Interface -->
 <div class="card hidden" id="exitCard">
   <h3 id="mandirTitle" style="text-align:center;margin-bottom:15px;color:var(--saffron)"></h3>
   <p id="batchInfo" class="info"></p>
@@ -148,13 +145,12 @@ const db = firebase.database();
 
 let templeId = "";
 let batchSize = 0;
-let timePerBatch = 5; // default 5 minutes if not set in Firebase
+let timePerBatch = 5;
 let dayStart = 1;
 let currentBatchStart = 1;
 let batchStartTime = 0;
 let timerInterval = null;
 
-// ================= VERIFY ADMIN =================
 function verifyAdmin(){
   const adminId = adminIdInput.value.trim();
   if(!adminId) return alert("Enter Admin ID");
@@ -172,22 +168,19 @@ function verifyAdmin(){
   });
 }
 
-// ================= LOAD MANDIR =================
 function loadMandir(){
   db.ref("mandirs/"+templeId).once("value").then(s=>{
     mandirTitle.innerText = "🛕 " + s.val().mandirName + " – Exit Gate";
   });
 }
 
-// ================= LOAD SETTINGS =================
 function loadSettings(){
   db.ref("batchSettings/"+templeId).once("value").then(s=>{
     batchSize = s.val().peoplePerBatch || 5;
-    timePerBatch = s.val().timePerBatch || 5; // in minutes
+    timePerBatch = s.val().timePerBatch || 5;
   });
 }
 
-// ================= LISTEN BATCH =================
 function listenBatch(){
   db.ref("nextBatch/"+templeId).on("value", s=>{
     const data = s.val() || { dayStart: 1, currentBatchStart: 1, batchStartTime: 0 };
@@ -199,12 +192,10 @@ function listenBatch(){
   });
 }
 
-// ================= UPDATE UI =================
 function updateUI(){
   const currentBatchEnd = currentBatchStart + batchSize - 1;
   batchInfo.innerText = `Current Batch Tokens: ${currentBatchStart} – ${currentBatchEnd} | Status: INSIDE`;
 
-  // Update timer
   const now = Date.now();
   const elapsedSec = Math.floor((now - batchStartTime)/1000);
   const totalSec = timePerBatch*60;
@@ -214,22 +205,26 @@ function updateUI(){
   timerInfo.innerText = `⏱️ Time Remaining: ${min}:${sec.toString().padStart(2,"0")}`;
 }
 
-// ================= TIMER =================
 function startTimer(){
   if(timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(updateUI, 1000);
 }
 
-// ================= BATCH OUT =================
+/* ✅ CONFIRMATION ADDED HERE — NOTHING ELSE CHANGED */
 function batchOut(){
   const currentBatchEnd = currentBatchStart + batchSize - 1;
+
+  const confirmed = confirm(
+    `Confirm Batch Exit?\n\nBatch: ${currentBatchStart} – ${currentBatchEnd}`
+  );
+
+  if(!confirmed) return; // ❌ user said NO → do nothing
+
   alert(`Batch ${currentBatchStart} – ${currentBatchEnd} exited ✅`);
 
-  // Move to next batch
   currentBatchStart += batchSize;
   batchStartTime = Date.now();
 
-  // Update in Firebase for full sync
   db.ref("nextBatch/"+templeId).update({
     currentBatchStart: currentBatchStart,
     batchStartTime: batchStartTime
