@@ -132,7 +132,12 @@ footer{
   <select id="templeSelect">
     <option value="">Loading mandirs…</option>
   </select>
-  <div class="info">📍 Geo-fencing enabled (within 5 km)</div>
+
+  <!-- ✅ Updated Note -->
+  <div class="info">
+    📍 Geo-fencing enabled — You must be within <b>10 km</b> range of the temple to join the queue.
+  </div>
+
   <button id="verifyBtn">Verify Location</button>
   <div id="locationStatus" class="status"></div>
 </div>
@@ -164,9 +169,11 @@ const db = firebase.database();
 
 let selectedTemple="", batchSize=0, timePerBatch=0;
 let myLastToken=0, countdownInterval=null;
+let mandirLat=0, mandirLng=0;
 
 const details=document.getElementById("details");
 const result=document.getElementById("result");
+const locationStatus=document.getElementById("locationStatus");
 
 /* Load mandirs */
 db.ref("mandirs").on("value", snap=>{
@@ -176,16 +183,53 @@ db.ref("mandirs").on("value", snap=>{
   });
 });
 
-/* Verify */
-verifyBtn.onclick=()=>{
-  selectedTemple=templeSelect.value;
-  if(!selectedTemple) return alert("Select mandir");
+/* Distance calculation (Haversine) */
+function getDistanceKm(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLon = (lon2-lon1) * Math.PI/180;
+  const a =
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) *
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
 
-  db.ref("batchSettings/"+selectedTemple).once("value").then(s=>{
-    batchSize=s.val().peoplePerBatch;
-    timePerBatch=s.val().timePerBatch;
-    details.classList.remove("hidden");
-    locationStatus.innerText="✅ Location verified";
+/* Verify Location */
+verifyBtn.onclick = () => {
+  selectedTemple = templeSelect.value;
+  if (!selectedTemple) return alert("Select mandir");
+
+  locationStatus.innerText = "📡 Checking your location...";
+
+  navigator.geolocation.getCurrentPosition(pos => {
+    const userLat = pos.coords.latitude;
+    const userLng = pos.coords.longitude;
+
+    db.ref("mandirs/"+selectedTemple).once("value").then(snap => {
+      mandirLat = snap.val().latitude;
+      mandirLng = snap.val().longitude;
+
+      const distance = getDistanceKm(userLat, userLng, mandirLat, mandirLng);
+
+      if (distance > 10) {
+        locationStatus.innerText =
+          `❌ You are ${distance.toFixed(2)} km away. Must be within 10 km range.`;
+        details.classList.add("hidden");
+        return;
+      }
+
+      // ✅ Location valid
+      db.ref("batchSettings/"+selectedTemple).once("value").then(s=>{
+        batchSize=s.val().peoplePerBatch;
+        timePerBatch=s.val().timePerBatch;
+        details.classList.remove("hidden");
+        locationStatus.innerText="✅ Location verified (within 10 km)";
+      });
+    });
+
+  }, () => {
+    alert("Location access is required to join the queue");
   });
 };
 
@@ -207,7 +251,7 @@ payBtn.onclick=()=>{
     ref.set({lastEnd:myLastToken});
 
     showTicket(tokens,amount);
-    startCountdown(); // 🔥 immediate calculation
+    startCountdown();
   });
 };
 
@@ -215,7 +259,7 @@ function showTicket(tokens,amount){
   result.classList.remove("hidden");
   result.innerHTML=`
     <h3>🎫 Your Tokens</h3>
-    <h5> You will be notified when you are two batches away! </h5>
+    <h5>You will be notified when you are two batches away!</h5>
     <div class="ticket">
       <p><b>Token No:</b> ${tokens.join(", ")}</p>
       <p><b>Paid:</b> ₹${amount}</p>
@@ -225,7 +269,7 @@ function showTicket(tokens,amount){
   `;
 }
 
-/* 🔥 Faster wait-time calculation */
+/* Wait time */
 function startCountdown(){
   clearInterval(countdownInterval);
 
@@ -244,11 +288,12 @@ function startCountdown(){
     });
   };
 
-  updateWaitTime();               // ✅ instant update
-  countdownInterval=setInterval(updateWaitTime, 5000); // 🔥 every 5 seconds
+  updateWaitTime();
+  countdownInterval=setInterval(updateWaitTime, 5000);
 }
 </script>
 
 </body>
 </html>
+
 
